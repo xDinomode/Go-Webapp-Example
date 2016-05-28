@@ -1,0 +1,15 @@
+{{ define "Post" }}
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<title>{{.Title}}</title>
+	</head>
+
+	<body>
+		<span>{{.Author}}</span>
+		<p>{{.Description}}</p>
+		{{.Body}}
+	</body>
+</html>
+{{ end }}
