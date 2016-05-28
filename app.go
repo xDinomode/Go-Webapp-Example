@@ -36,8 +36,6 @@ type webPage struct {
 
 //Parse markdown and serve to client from templates
 func handlePost(res http.ResponseWriter, req *http.Request) {
-	url := req.URL.Path[1:]
-	fmt.Println(url)
 	//Read in markdown
 	input, _ := ioutil.ReadFile("test.md")
 
