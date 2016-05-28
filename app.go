@@ -2,12 +2,12 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/russross/blackfriday"
 	"gopkg.in/yaml.v2"
 	"html/template"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 //Parse all files inside /templates into var templates
@@ -30,14 +30,30 @@ func (post *webPost) Parse(markdownYAML []byte) error {
 
 //Handle main webPages (index.html, about.html, contact.html, etc..)
 type webPage struct {
-	WelcomeMsg   string
-	Introduction string
+	Title string
+	Body  template.HTML
+}
+
+//Grabs yaml from the markdown and inserts into a type webPage (Title, Author, etc..)
+func (page *webPage) Parse(markdownYAML []byte) error {
+
+	//Inserts yaml into type webPage and returns nil if no error
+	return yaml.Unmarshal(markdownYAML, page)
 }
 
 //Parse markdown and serve to client from templates
 func handlePost(res http.ResponseWriter, req *http.Request) {
-	//Read in markdown
-	input, _ := ioutil.ReadFile("test.md")
+
+	//Grab the file name from path
+	url := req.URL.Path[len("/post/"):]
+
+	//Read markdown requested by client
+	input, err := ioutil.ReadFile("posts/" + url + ".md")
+	//404 if file not found
+	if err != nil {
+		http.NotFound(res, req)
+		return
+	}
 
 	//Split the []byte input into two.
 	//One part is yaml and the other is markdown
@@ -49,7 +65,7 @@ func handlePost(res http.ResponseWriter, req *http.Request) {
 	//Create new post type webPost
 	var post webPost
 	//Send the first []byte to be parsed by yaml.Unmarshal
-	err := post.Parse(inputSplit[0])
+	err = post.Parse(inputSplit[0])
 	if err != nil {
 		panic("failed parsing yaml")
 	}
@@ -60,17 +76,42 @@ func handlePost(res http.ResponseWriter, req *http.Request) {
 }
 
 //Handles http requests for url path "/"
-func handleHomePage(res http.ResponseWriter, req *http.Request) {
+func handleWebPage(res http.ResponseWriter, req *http.Request) {
 
-	//Create struct and assign it variables
-	homePage := new(webPage)
-	homePage.WelcomeMsg = "Welcome to a website!"
-	homePage.Introduction = "Golang is the best programming language ever!"
+	//Grab url path
+	url := strings.ToLower(req.URL.Path[1:])
 
-	//res: http.ResponseWriter to write our data back to the client
-	//{{ define "landingPage" }} is inside templates/index.html and tells the method which template to use
-	//*homePage: Passes the values stored inside our homePage struct to be combined with the template
-	templates.ExecuteTemplate(res, "landingPage", *homePage)
+	//Set the url manually for index
+	if url == "" || url == "index.html" {
+		url = "index"
+	}
+
+	//Try to read in the markdown file based on the path
+	input, err := ioutil.ReadFile(url + ".md")
+	//404 if file not found
+	if err != nil {
+		http.NotFound(res, req)
+		return
+	}
+
+	//Split the input into two [][]byte to extract yaml/markdown seperately
+	//Your markdown files should contain 4 new lines between the yaml and markdown
+	inputSplit := bytes.Split(input, []byte("\n\n\n\n"))
+
+	//Convert markdown into html
+	html := blackfriday.MarkdownCommon(inputSplit[1])
+
+	//Creat a type webPage
+	var page webPage
+	//Insert yaml into webPage variables
+	err = page.Parse(inputSplit[0])
+	if err != nil {
+		panic("failed parsing yaml")
+	}
+
+	//Assign html to page.Body and serve to the client
+	page.Body = template.HTML(html)
+	templates.ExecuteTemplate(res, "Page", page)
 }
 
 func main() {
@@ -80,11 +121,11 @@ func main() {
 		http.ServeFile(res, req, req.URL.Path[1:])
 	})
 
-	//Use this function to handle Posts
+	//Use this function to handle Posts (/post/sample)
 	http.HandleFunc("/post/", handlePost)
 
-	//Use the function handleHomePage for any requests to "/"
-	http.HandleFunc("/", handleHomePage)
+	//Routes for type webPage (/, /about)
+	http.HandleFunc("/", handleWebPage)
 
 	//Start the server on Port 8080
 	http.ListenAndServe(":8080", nil)

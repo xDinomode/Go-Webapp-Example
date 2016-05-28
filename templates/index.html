@@ -1,5 +1,5 @@
 <!--define the name of this template-->
-{{ define "landingPage" }}
+{{ define "Page" }}
 
 <html>
 
@@ -7,10 +7,10 @@
 {{template "header"}}
 
 <!--struct variable that was defined in app.go line 22-->
-<h1>{{ .WelcomeMsg }}</h1>
+<h1>{{ .Title }}</h1>
 
-<!--struct variable taht was defined in app.go line 23-->
-<p>{{ .Introduction  }}</p>
+<!--webPage.Body markdown parsed by blackfriday-->
+{{.Body}}
 
 <!--include our footer.html template-->
 {{template "footer"}}
