@@ -1,13 +1,11 @@
 ## Go web app example 
 
-Including templates
+Inspired by [Jekyll](https://jekyllrb.com/) 
 
-## To run
+**app.go** is the main file
 
-listens on port 8080
+**index.md, about.md** are main webpages and are served from / and /about
 
-```bash
-go run app.go 
+Folder **posts** is served from /post/example-post.md
 
-./app
-```
+Folder **templates** uses Go's default html/template
